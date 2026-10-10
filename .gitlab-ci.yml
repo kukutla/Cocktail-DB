@@ -1,0 +1,40 @@
+stages:
+  - test
+  - deploy
+
+# Global variable indicating we want to generate an OIDC Token
+variables:
+  AWS_PROFILE: "gitlab-ci"
+
+# Example unit testing stage
+run_tests:
+  stage: test
+  image: node:18 # Adjust to your application stack
+  script:
+    - echo "Running application tests..."
+    - # npm install && npm test
+
+# Deployment stage utilizing secure AWS authentication
+deploy_to_aws:
+  stage: deploy
+  image: 
+    name: amazon/aws-cli:latest
+    entrypoint: [""]
+  id_tokens:
+    AWS_JWT_TOKEN:
+      aud: https://gitlab.com
+  before_script:
+    - mkdir -p ~/.aws
+    - echo "Creating temporary AWS configuration..."
+    - |
+      aws configure set role_arn ${AWS_ROLE_ARN} --profile ${AWS_PROFILE}
+      aws configure set web_identity_token_file "${AWS_JWT_TOKEN}" --profile ${AWS_PROFILE}
+      aws configure set region ${AWS_DEFAULT_REGION} --profile ${AWS_PROFILE}
+  script:
+    - echo "Verifying AWS authentication identity..."
+    - aws sts get-caller-identity --profile ${AWS_PROFILE}
+    - echo "Deploying your application code..."
+    - # Replace this line with your actual deployment mechanism, for example:
+    - # aws s3 sync ./dist/ s3://my-production-bucket/ --profile ${AWS_PROFILE}
+  only:
+    - main # Only execute deployment from the main production branch
